@@ -18,31 +18,36 @@ const register = async (req, res) => {
       availability,
     } = req.body;
 
-    const existUser = await User.findOne({ email: email });
+    const existUser = await User.findOne({ email });
     if (existUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
     const hashedPassword = await bycrypt.hash(password, 10);
 
-    const user = new User({
+    // Prepare user data based on role
+    const userData = {
       firstName,
       lastName,
       email,
       phone,
       password: hashedPassword,
       role,
-      servicesCategory,
-      experience,
-      location,
-      bio,
-      availability,
-    });
+    };
 
+    if (role === "service_provider") {
+      userData.servicesCategory = servicesCategory;
+      userData.experience = experience;
+      userData.location = location;
+      userData.bio = bio;
+      userData.availability = availability;
+    }
+
+    const user = new User(userData);
     const savedUser = await user.save();
     res
       .status(201)
-      .json({ message: "User created successfully", user: savedUser.id });
+      .json({ message: "User created successfully", user: savedUser._id });
   } catch (err) {
     res
       .status(500)
@@ -143,6 +148,21 @@ const updateUser = async (req, res) => {
   }
 };
 
+const deleteUser = async (req, res) => {
+  const uid = req.params.id;
+  try {
+    await User.findByIdAndDelete(uid).then(async (u) => {
+      if (u) {
+        res.status(200).json({ msg: "User deleted successfully" });
+      } else {
+        res.status(404).json({ msg: "User not Found" });
+      }
+    });
+  } catch (err) {
+    res.status(500).json(err);
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -150,4 +170,5 @@ module.exports = {
   getAllUsers,
   getUserByRole,
   updateUser,
+  deleteUser,
 };
